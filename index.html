@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Attendee Check-in | TGSOM 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      body {
+        font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background: #f0f2f5;
+      }
+      .card {
+        background: white;
+        padding: 30px;
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+      }
+      .logo {
+        color: #0052cc;
+        font-weight: bold;
+        font-size: 1.8rem;
+        margin-bottom: 5px;
+      }
+      .sub-logo {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 25px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      input {
+        width: 100%;
+        padding: 18px;
+        margin-bottom: 20px;
+        border: 2px solid #dfe1e5;
+        border-radius: 12px;
+        font-size: 1.3rem;
+        box-sizing: border-box;
+        outline: none;
+        transition: border 0.3s;
+      }
+      input:focus {
+        border-color: #0052cc;
+      }
+      button {
+        width: 100%;
+        padding: 18px;
+        background: #0052cc;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.2rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: background 0.3s;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+
+      #status-screen {
+        display: none;
+        padding: 25px;
+        border-radius: 15px;
+        margin-top: 10px;
+      }
+      .success {
+        background: #e6fffa;
+        color: #234e52;
+        border: 2px solid #38b2ac;
+      }
+      .error {
+        background: #fff5f5;
+        color: #c53030;
+        border: 2px solid #feb2b2;
+      }
+      .warning {
+        background: #fffaf0;
+        color: #9c4221;
+        border: 2px solid #fbd38d;
+      }
+
+      .big-icon {
+        font-size: 5rem;
+        margin-bottom: 15px;
+      }
+      .timestamp {
+        font-size: 0.85rem;
+        opacity: 0.8;
+        margin-top: 15px;
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        padding-top: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="logo">TGSOM 2026</div>
+      <div class="sub-logo">Global School of Money</div>
+
+      <div id="form-container">
+        <p style="color: #444; font-size: 1.1rem">
+          Enter your <b>Phone Number</b> to check in
+        </p>
+        <input
+          type="tel"
+          id="phoneInput"
+          placeholder="0801 234 5678"
+          spellcheck="false"
+        />
+        <button id="checkInBtn">VERIFY & CHECK IN</button>
+      </div>
+
+      <div id="status-screen">
+        <div class="big-icon" id="status-icon"></div>
+        <div
+          id="status-message"
+          style="font-weight: bold; font-size: 1.4rem; line-height: 1.2"
+        ></div>
+        <div
+          id="attendee-name"
+          style="margin-top: 15px; font-size: 1.2rem; color: #1a202c"
+        ></div>
+        <div class="timestamp" id="status-time"></div>
+        <button
+          onclick="window.location.reload()"
+          style="
+            margin-top: 25px;
+            background: #4a5568;
+            font-size: 1rem;
+            padding: 12px;
+          "
+        >
+          Back
+        </button>
+      </div>
+    </div>
+
+    <script>
+      // --- 1. CONFIGURATION ---
+      const SUPABASE_URL = "https://iuqniebufmabxmsxozbj.supabase.co";
+      const SUPABASE_KEY =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1cW5pZWJ1Zm1hYnhtc3hvemJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0Mjg5NTYsImV4cCI6MjA3OTAwNDk1Nn0.TLk95hndIdYFezvSbputkVRB1K8PZe_qO-wIm3Xmvto"; // <--- REPLACE WITH YOUR REAL KEY
+      const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+      const btn = document.getElementById("checkInBtn");
+      const input = document.getElementById("phoneInput");
+      const formContainer = document.getElementById("form-container");
+      const statusScreen = document.getElementById("status-screen");
+
+      // --- 2. THE CHECK-IN FUNCTION ---
+      // The "async" keyword here is what fixes your SyntaxError
+      async function performCheckIn() {
+        let rawPhone = input.value.trim();
+
+        if (!rawPhone) {
+          alert("Please enter a phone number");
+          return;
+        }
+
+        // Normalization: Get last 10 digits to handle +234, 080, etc.
+        let cleanPhone = rawPhone.replace(/\D/g, "");
+        let searchSuffix = cleanPhone.slice(-10);
+
+        if (searchSuffix.length < 10) {
+          alert("Please enter at least 10 digits.");
+          return;
+        }
+
+        btn.disabled = true;
+        btn.innerText = "Searching...";
+
+        try {
+          // A. Search for attendee
+          const { data: users, error: findError } = await _supabase
+            .from("registrations")
+            .select("*")
+            .ilike("phone", `%${searchSuffix}`);
+
+          if (findError) throw findError;
+
+          if (!users || users.length === 0) {
+            showStatus(
+              "error",
+              "❌ NOT FOUND",
+              "Registration not found.",
+              "Check the number or see Help Desk."
+            );
+            return;
+          }
+
+          const user = users[0];
+
+          // B. Check if already in
+          if (user.is_checked_in) {
+            showStatus(
+              "warning",
+              "✋ ALREADY IN",
+              "Already checked in.",
+              user.full_name
+            );
+            return;
+          }
+
+          // C. Update database
+          const { error: updateError } = await _supabase
+            .from("registrations")
+            .update({
+              is_checked_in: true,
+              checked_in_at: new Date().toISOString(),
+            })
+            .eq("id", user.id);
+
+          if (updateError) throw updateError;
+
+          // D. Success
+          showStatus(
+            "success",
+            "✅ WELCOME",
+            "Check-in Successful",
+            user.full_name
+          );
+        } catch (err) {
+          console.error(err);
+          showStatus(
+            "error",
+            "SYSTEM ERROR",
+            "Connection failed.",
+            err.message
+          );
+        } finally {
+          btn.disabled = false;
+          btn.innerText = "VERIFY & CHECK IN";
+        }
+      }
+
+      // --- 3. EVENT LISTENERS ---
+      btn.addEventListener("click", performCheckIn);
+
+      // Allow pressing "Enter" key to submit
+      input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") performCheckIn();
+      });
+
+      // --- 4. UI HELPER ---
+      function showStatus(type, title, msg, name) {
+        formContainer.style.display = "none";
+        statusScreen.style.display = "block";
+        statusScreen.className = type;
+
+        document.getElementById("status-message").innerText =
+          title + "\n" + msg;
+        document.getElementById("attendee-name").innerText = name;
+        document.getElementById("status-time").innerText =
+          "Verified at: " + new Date().toLocaleTimeString();
+
+        const icons = { success: "✅", error: "❌", warning: "✋" };
+        document.getElementById("status-icon").innerText = icons[type] || "ℹ️";
+      }
+    </script>
+  </body>
+</html>
