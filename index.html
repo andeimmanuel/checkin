@@ -3,11 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Attendee Check-in | TGSOM 2026</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png" />
-    <link rel="manifest" href="/site.webmanifest" />
+    <title>Attendee Check-in | TEA 2026</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
       body {
@@ -21,44 +17,90 @@
       }
       .card {
         background: white;
-        padding: 30px;
+        padding: 40px;
         border-radius: 20px;
         box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
         width: 90%;
-        max-width: 400px;
+        max-width: 450px;
         text-align: center;
+        position: relative; /* Needed for dropdown positioning */
       }
       .logo {
-        color: #0052cc;
+        color: #d35400;
         font-weight: bold;
-        font-size: 1.8rem;
+        font-size: 2rem;
         margin-bottom: 5px;
       }
       .sub-logo {
         font-size: 0.9rem;
         color: #666;
-        margin-bottom: 25px;
+        margin-bottom: 30px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
       }
+      
+      /* Input Wrapper to hold the dropdown relative to input */
+      .input-wrapper {
+        position: relative;
+        width: 100%;
+        margin-bottom: 20px;
+      }
+
       input {
         width: 100%;
         padding: 18px;
-        margin-bottom: 20px;
         border: 2px solid #dfe1e5;
         border-radius: 12px;
-        font-size: 1.3rem;
+        font-size: 1.2rem;
         box-sizing: border-box;
         outline: none;
         transition: border 0.3s;
       }
       input:focus {
-        border-color: #0052cc;
+        border-color: #d35400;
       }
+
+      /* THE NEW DROPDOWN STYLES */
+      .suggestions-list {
+        position: absolute;
+        top: 100%; /* Right below the input */
+        left: 0;
+        width: 100%;
+        background: white;
+        border: 1px solid #dfe1e5;
+        border-top: none;
+        border-radius: 0 0 12px 12px;
+        box-shadow: 0 10px 15px rgba(0,0,0,0.1);
+        z-index: 100;
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        max-height: 250px;
+        overflow-y: auto;
+        text-align: left;
+        display: none; /* Hidden by default */
+      }
+      
+      .suggestions-list li {
+        padding: 12px 18px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f2f5;
+        transition: background 0.2s;
+      }
+      .suggestions-list li:last-child {
+        border-bottom: none;
+      }
+      .suggestions-list li:hover {
+        background-color: #fffaf0; /* Light orange hover */
+        color: #d35400;
+      }
+      .suggestion-name { font-weight: bold; display: block; }
+      .suggestion-email { font-size: 0.85rem; color: #888; }
+
       button {
         width: 100%;
         padding: 18px;
-        background: #0052cc;
+        background: #d35400;
         color: white;
         border: none;
         border-radius: 12px;
@@ -67,210 +109,288 @@
         cursor: pointer;
         transition: background 0.3s;
       }
+      button:hover {
+        background: #a04000;
+      }
       button:disabled {
         background: #ccc;
         cursor: not-allowed;
       }
 
+      /* Status Screen Styles */
       #status-screen {
         display: none;
-        padding: 25px;
+        padding: 20px;
         border-radius: 15px;
         margin-top: 10px;
+        animation: fadeIn 0.5s;
       }
-      .success {
-        background: #e6fffa;
-        color: #234e52;
-        border: 2px solid #38b2ac;
+      @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
       }
-      .error {
-        background: #fff5f5;
-        color: #c53030;
-        border: 2px solid #feb2b2;
-      }
-      .warning {
-        background: #fffaf0;
-        color: #9c4221;
-        border: 2px solid #fbd38d;
-      }
+      .success { background: #e6fffa; border: 2px solid #38b2ac; color: #234e52; }
+      .error { background: #fff5f5; border: 2px solid #fc8181; color: #c53030; }
+      .warning { background: #fffaf0; border: 2px solid #fbd38d; color: #9c4221; }
 
-      .big-icon {
-        font-size: 5rem;
-        margin-bottom: 15px;
+      .big-icon { font-size: 4rem; margin-bottom: 10px; }
+      
+      .group-badge {
+        display: inline-block;
+        background: #2d3748;
+        color: white;
+        padding: 10px 25px;
+        border-radius: 50px;
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 15px 0;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.2);
       }
+      
       .timestamp {
-        font-size: 0.85rem;
-        opacity: 0.8;
-        margin-top: 15px;
-        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        font-size: 0.8rem;
+        opacity: 0.7;
+        margin-top: 20px;
+        border-top: 1px solid rgba(0,0,0,0.1);
         padding-top: 10px;
       }
     </style>
   </head>
   <body>
     <div class="card">
-      <div class="logo">TGSOM 2026</div>
-      <div class="sub-logo">Global School of Money</div>
+      <div class="logo">TEA 2026</div>
+      <div class="sub-logo">The Entrepreneurship Academy</div>
 
       <div id="form-container">
-        <p style="color: #444; font-size: 1.1rem">
-          Enter your <b>Phone Number</b> to check in
+        <p style="color: #444; font-size: 1.1rem; margin-bottom: 15px;">
+          Start typing <b>Name</b> to search...
         </p>
-        <input
-          type="tel"
-          id="phoneInput"
-          placeholder="0801 234 5678"
-          spellcheck="false"
-        />
-        <button id="checkInBtn">VERIFY & CHECK IN</button>
+        
+        <div class="input-wrapper">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="e.g. Ade"
+              autocomplete="off"
+            />
+            <ul id="suggestions-list" class="suggestions-list"></ul>
+        </div>
+
+        <button id="checkInBtn">VERIFY & ASSIGN GROUP</button>
       </div>
 
       <div id="status-screen">
         <div class="big-icon" id="status-icon"></div>
-        <div
-          id="status-message"
-          style="font-weight: bold; font-size: 1.4rem; line-height: 1.2"
-        ></div>
-        <div
-          id="attendee-name"
-          style="margin-top: 15px; font-size: 1.2rem; color: #1a202c"
-        ></div>
+        <div id="status-message" style="font-weight: bold; font-size: 1.4rem; line-height: 1.2;"></div>
+        <div id="attendee-name" style="margin-top: 10px; font-size: 1.3rem; color: #1a202c"></div>
+        
+        <div id="group-container" style="display:none;">
+            <p style="margin: 10px 0 5px 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px;">You are in</p>
+            <div id="group-badge" class="group-badge"></div>
+        </div>
+
         <div class="timestamp" id="status-time"></div>
-        <button
-          onclick="window.location.reload()"
-          style="
-            margin-top: 25px;
-            background: #4a5568;
-            font-size: 1rem;
-            padding: 12px;
-          "
-        >
-          Back
-        </button>
+        <button onclick="window.location.reload()" style="margin-top: 20px; background: #4a5568; padding: 12px; font-size: 1rem;">Next Attendee</button>
       </div>
     </div>
 
     <script>
       // --- 1. CONFIGURATION ---
-      const SUPABASE_URL = "https://iuqniebufmabxmsxozbj.supabase.co";
-      const SUPABASE_KEY =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Iml1cW5pZWJ1Zm1hYnhtc3hvemJqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0Mjg5NTYsImV4cCI6MjA3OTAwNDk1Nn0.TLk95hndIdYFezvSbputkVRB1K8PZe_qO-wIm3Xmvto"; // <--- REPLACE WITH YOUR REAL KEY
+      const SUPABASE_URL = "https://rnztrlsicuzjhsfybeal.supabase.co";
+      
+      // ⚠️ ENSURE YOUR KEY IS CORRECT HERE
+      const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJuenRybHNpY3V6amhzZnliZWFsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njg3MTc4MzksImV4cCI6MjA4NDI5MzgzOX0.ZRrQChmxlCIw_Hd2wiF7TqQFrI9TfnS0PsGINxJ8hPA";
+
+      
       const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
       const btn = document.getElementById("checkInBtn");
-      const input = document.getElementById("phoneInput");
+      const input = document.getElementById("searchInput");
+      const suggestionsList = document.getElementById("suggestions-list");
       const formContainer = document.getElementById("form-container");
       const statusScreen = document.getElementById("status-screen");
 
-      // --- 2. THE CHECK-IN FUNCTION ---
-      // The "async" keyword here is what fixes your SyntaxError
-      async function performCheckIn() {
-        let rawPhone = input.value.trim();
+      // --- 2. AUTOCOMPLETE LOGIC ---
+      let debounceTimer;
 
-        if (!rawPhone) {
-          alert("Please enter a phone number");
-          return;
+      // Listen for typing
+      input.addEventListener("input", (e) => {
+        const query = e.target.value.trim();
+        
+        // Clear old timer (prevents searching on every single keystroke)
+        clearTimeout(debounceTimer);
+
+        if (query.length < 2) {
+            suggestionsList.style.display = "none";
+            return;
         }
 
-        // Normalization: Get last 10 digits to handle +234, 080, etc.
-        let cleanPhone = rawPhone.replace(/\D/g, "");
-        let searchSuffix = cleanPhone.slice(-10);
+        // Wait 300ms after user stops typing to search
+        debounceTimer = setTimeout(() => {
+            fetchSuggestions(query);
+        }, 300);
+      });
 
-        if (searchSuffix.length < 10) {
-          alert("Please enter at least 10 digits.");
+      // Fetch from Supabase
+      async function fetchSuggestions(query) {
+        try {
+            // Search Full Name OR Email
+            const { data, error } = await _supabase
+                .from("registrations")
+                .select("full_name, email")
+                .or(`full_name.ilike.%${query}%,email.ilike.%${query}%`)
+                .limit(5); // Only show top 5 results
+
+            if (error) throw error;
+
+            renderSuggestions(data);
+        } catch (err) {
+            console.error("Search error:", err);
+        }
+      }
+
+      // Show results in dropdown
+      function renderSuggestions(users) {
+        suggestionsList.innerHTML = ""; // Clear old results
+
+        if (!users || users.length === 0) {
+            suggestionsList.style.display = "none";
+            return;
+        }
+
+        users.forEach(user => {
+            const li = document.createElement("li");
+            li.innerHTML = `
+                <span class="suggestion-name">${user.full_name}</span>
+                <span class="suggestion-email">${user.email}</span>
+            `;
+            
+            // When clicked, fill input and hide list
+            li.addEventListener("click", () => {
+                input.value = user.full_name; // Fill the name
+                suggestionsList.style.display = "none"; // Hide list
+                // Optional: Automatically trigger check-in? 
+                // performCheckIn(); 
+            });
+
+            suggestionsList.appendChild(li);
+        });
+
+        suggestionsList.style.display = "block";
+      }
+
+      // Hide dropdown if user clicks outside
+      document.addEventListener("click", (e) => {
+        if (!input.contains(e.target) && !suggestionsList.contains(e.target)) {
+            suggestionsList.style.display = "none";
+        }
+      });
+
+
+      // --- 3. CHECK-IN LOGIC ---
+      async function performCheckIn() {
+        let query = input.value.trim();
+
+        if (!query || query.length < 3) {
+          alert("Please enter a valid Email or Full Name");
           return;
         }
 
         btn.disabled = true;
-        btn.innerText = "Searching...";
+        btn.innerText = "Checking Database...";
 
         try {
-          // A. Search for attendee
-          const { data: users, error: findError } = await _supabase
-            .from("registrations")
-            .select("*")
-            .ilike("phone", `%${searchSuffix}`);
+            // A. Exact Search (since user likely selected from list)
+            // We still use .or() just in case they typed it manually
+            const { data: users, error: findError } = await _supabase
+                .from("registrations")
+                .select("*")
+                .or(`email.ilike.%${query}%,full_name.ilike.%${query}%`);
 
-          if (findError) throw findError;
+            if (findError) throw findError;
 
-          if (!users || users.length === 0) {
-            showStatus(
-              "error",
-              "❌ NOT FOUND",
-              "Registration not found.",
-              "Check the number or see Help Desk."
-            );
-            return;
-          }
+            if (!users || users.length === 0) {
+                showStatus("error", "❌ NOT FOUND", "No registration found for:", query);
+                return;
+            }
 
-          const user = users[0];
+            // Handle Duplicates (e.g. two "John Smith"s)
+            if (users.length > 1) {
+                // If the user typed a name that appears twice, ask for email
+                // But if they clicked a specific email from dropdown, we should filter by that?
+                // For simplicity: Alert them.
+                alert(`Multiple people found for "${query}". Please enter the exact Email.`);
+                btn.disabled = false;
+                btn.innerText = "VERIFY & ASSIGN GROUP";
+                return;
+            }
 
-          // B. Check if already in
-          if (user.is_checked_in) {
-            showStatus(
-              "warning",
-              "✋ ALREADY IN",
-              "Already checked in.",
-              user.full_name
-            );
-            return;
-          }
+            const user = users[0];
 
-          // C. Update database
-          const { error: updateError } = await _supabase
-            .from("registrations")
-            .update({
-              is_checked_in: true,
-              checked_in_at: new Date().toISOString(),
-            })
-            .eq("id", user.id);
+            // B. Already In?
+            if (user.is_checked_in) {
+                showStatus("warning", "✋ ALREADY IN", "Welcome back,", user.full_name, user.assigned_group);
+                return;
+            }
 
-          if (updateError) throw updateError;
+            // C. Assign Group
+            let groupToAssign = user.assigned_group;
+            if (!groupToAssign) {
+                groupToAssign = Math.floor(Math.random() * 10) + 1; 
+            }
 
-          // D. Success
-          showStatus(
-            "success",
-            "✅ WELCOME",
-            "Check-in Successful",
-            user.full_name
-          );
+            // D. Update DB
+            const { error: updateError } = await _supabase
+                .from("registrations")
+                .update({
+                    is_checked_in: true,
+                    checked_in_at: new Date().toISOString(),
+                    assigned_group: groupToAssign
+                })
+                .eq("id", user.id);
+
+            if (updateError) throw updateError;
+
+            // E. Success
+            showStatus("success", "✅ WELCOME", "Welcome to TEA '2026", user.full_name, groupToAssign);
+
         } catch (err) {
-          console.error(err);
-          showStatus(
-            "error",
-            "SYSTEM ERROR",
-            "Connection failed.",
-            err.message
-          );
+            console.error(err);
+            showStatus("error", "SYSTEM ERROR", "Connection failed.", err.message);
         } finally {
-          btn.disabled = false;
-          btn.innerText = "VERIFY & CHECK IN";
+            if(statusScreen.style.display === "none") {
+                btn.disabled = false;
+                btn.innerText = "VERIFY & ASSIGN GROUP";
+            }
         }
       }
 
-      // --- 3. EVENT LISTENERS ---
-      btn.addEventListener("click", performCheckIn);
-
-      // Allow pressing "Enter" key to submit
-      input.addEventListener("keypress", (e) => {
-        if (e.key === "Enter") performCheckIn();
-      });
-
-      // --- 4. UI HELPER ---
-      function showStatus(type, title, msg, name) {
+      // --- 4. UI HELPERS ---
+      function showStatus(type, title, msg, name, groupNum) {
         formContainer.style.display = "none";
         statusScreen.style.display = "block";
         statusScreen.className = type;
 
-        document.getElementById("status-message").innerText =
-          title + "\n" + msg;
+        document.getElementById("status-icon").innerText = type === "success" ? "🎉" : (type === "error" ? "❌" : "✋");
+        document.getElementById("status-message").innerHTML = title + "<br><span style='font-size:1rem; font-weight:normal'>" + msg + "</span>";
         document.getElementById("attendee-name").innerText = name;
-        document.getElementById("status-time").innerText =
-          "Verified at: " + new Date().toLocaleTimeString();
+        document.getElementById("status-time").innerText = "Processed at: " + new Date().toLocaleTimeString();
 
-        const icons = { success: "✅", error: "❌", warning: "✋" };
-        document.getElementById("status-icon").innerText = icons[type] || "ℹ️";
+        const groupContainer = document.getElementById("group-container");
+        const groupBadge = document.getElementById("group-badge");
+        
+        if (groupNum) {
+            groupContainer.style.display = "block";
+            groupBadge.innerText = "GROUP " + groupNum;
+        } else {
+            groupContainer.style.display = "none";
+        }
       }
+
+      btn.addEventListener("click", performCheckIn);
+      input.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") performCheckIn();
+      });
     </script>
   </body>
 </html>
